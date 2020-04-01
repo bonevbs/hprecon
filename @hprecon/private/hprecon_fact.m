@@ -1,12 +1,18 @@
-function [P, i] = compute_factorization_rec(P, A, i)
+function P = hprecon_fact(P, A)
+  P = hprecon_symb_fact(P);
+  [P, i] = hprecon_fact_rec(P, A, 0);
+  assert(i == P.desc + 1);
+end
+
+function [P, i] = hprecon_fact_rec(P, A, i)
   if (isempty(P.Son1) && isempty(P.Son2))
     fprintf('factoring node %d\n', i)
-    P = factor_leafnode(P, A);
+    P = fact_leaf(P, A);
   elseif (~isempty(P.Son1) && ~isempty(P.Son2))
-    [P.Son1, i] = compute_factorization_rec(P.Son1, A, i);
-    [P.Son2, i] = compute_factorization_rec(P.Son2, A, i);
+    [P.Son1, i] = hprecon_fact_rec(P.Son1, A, i);
+    [P.Son2, i] = hprecon_fact_rec(P.Son2, A, i);
     fprintf('factoring node %d\n', i)
-    P = factor_branchnode(P, A);
+    P = fact_branch(P, A);
   else
     error('Elimination tree is not balanced. This is not supported.')
   end
@@ -14,7 +20,7 @@ function [P, i] = compute_factorization_rec(P, A, i)
 end
 
 % assemble factorization from children
-function P = factor_branchnode(P, A)
+function P = fact_branch(P, A)
   % TODO: It might be completely unnecessary to permute the entries in the
   % outputted Schur complement. IT might be worth having a look at that
 
@@ -60,6 +66,10 @@ function P = factor_branchnode(P, A)
   % this is just some code to compare how well we are compressing
   Aref = [full(P.Son1.S), A(idx1, idx2); A(idx2, idx1), full(P.Son2.S)];
   Aref = Aref(iperm,iperm); norm(Aref - hA, 'fro')/norm(Aref, 'fro')
+  % use the direct way to compute the reference matrix
+  ii = setdiff(P.get_interior(), P.inter); bb = [idx1, idx2];
+  Aref = A(bb,bb) - A(bb,ii) * (A(ii,ii) \ A(ii,bb));
+  Aref = Aref(iperm,iperm); norm(Aref - hA, 'fro')/norm(Aref, 'fro')
   
   % only the top block and the left and right transforms need to be stored
   P.Aii = clean_hss(hA.A11);
@@ -70,32 +80,40 @@ function P = factor_branchnode(P, A)
   % compute intermediate matrix for efficient low-rank update
   K = (P.LV' * (P.Aii \ P.RU)) * P.RV';
   
+  % compute the permutation to expose the finter block
+  % TODO : Eventually we can get rid of this permutation step and also of
+  % finter/fbound unless we develop a better way of assembling the
+  % intermediate Schur complement which involves exposing the topmost block
+  perm = []; iperm = [];
+  perm = [P.finter, P.fbound]; iperm(perm) = 1:length(perm);
+  
   % again using standard clusters, form the Schur complement in HSS form
   Sfun = @(x) Abb*x - P.LU*(K*x);
   Sfunt = @(x) Abb'*x - K'*(P.LU'*x);
-  Seval = @(i,j) get(P.Aii, i, j) + P.LU(i,:)*K(:,j);
-  P.S = hss('handle', Sfun, Sfunt, Seval, length(bound), length(bound));
+  Seval = @(i,j) get(Abb, i, j) + P.LU(i,:)*K(:,j);
+  P.S = hss('handle', @(x) Afun_perm(Sfun, iperm, x), ...
+    @(x) Afun_perm(Sfun, iperm, x), ...
+    @(i,j) Seval(perm(i), perm(j)), length(perm), length(perm));
   
   P.RU = P.Aii \ P.RU;
   P.LV = (P.LV' / P.Aii)';
-  
-  % TODO S is still not in the correct reordering and needs to 'expose' the
-  % block with the reentries
 end
 
 % factor leafnodes directly
-function P = factor_leafnode(P, A)
+function P = fact_leaf(P, A)
   P.Aii = A(P.inter, P.inter);
   P.LU = A(P.bound, P.inter) / P.Aii;
-  P.RV = P.Aii \ A(P.inter, P.bound);
+  P.LV = speye(length(P.inter),length(P.inter));
+  P.RV = (P.Aii \ A(P.inter, P.bound))';
+  P.RU = speye(length(P.inter),length(P.inter));
   S      = A(P.bound, P.bound) - A(P.bound, P.inter) * (P.Aii \ A(P.inter, P.bound));
   cl     = gen_cluster_rec([length(P.finter), length(P.finter) + length(P.fbound)], hssoption('block-size'));
   % nonstandard blocking doesn't seem to be supported yet
-  %P.S    = hss(...
-  %         [S(P.finter, P.finter), S(P.finter, P.fbound); S(P.fbound, P.finter), S(P.fbound, P.fbound);],...
-  %         'cluster', cl);
+  P.S    = hss(...
+           [S(P.finter, P.finter), S(P.finter, P.fbound); S(P.fbound, P.finter), S(P.fbound, P.fbound)],...
+           'cluster', cl);
   % for now only standard clusters
-  P.S    = hss([S(P.finter, P.finter), S(P.finter, P.fbound); S(P.fbound, P.finter), S(P.fbound, P.fbound);]);
+  %P.S    = hss([S(P.finter, P.finter), S(P.finter, P.fbound); S(P.fbound, P.finter), S(P.fbound, P.fbound)]);
 end
 
 
@@ -125,6 +143,10 @@ function e = blockeval(A11, A12, A21, A22, ni, nj, i ,j)
   if any(is) && any(js)
     e(is, js) = A22(i(is)-ni, j(js)-nj);
   end
+end
+
+function x = Afun_perm(Afun, perm, x)
+  x(perm, :) = Afun(x(perm,:));
 end
 
 % not necessary anymore

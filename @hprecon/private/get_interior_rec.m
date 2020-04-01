@@ -8,7 +8,7 @@ function interior = get_interior_rec(P, interior)
   
   % throw an error if we try to append something that was already
   % eliminated
-  if preconoption('checks')
+  if hpreconoption('checks')
     assert(isempty(intersect(interior, P.inter)), 'Found previously eliminated items in P.inter');
   end
   interior = [interior, P.inter];

@@ -36,21 +36,20 @@ classdef hprecon < handle
         obj.fbound = [];
         return;
       elseif nargin == 1
-        obj = build_hprecon(elim_tree);
+        obj = hprecon_build(elim_tree);
       end
     end
     
     % compute factorization
     function factor(obj, A)
-      symbolic_factorization_rec(obj,1);
-      compute_factorization_rec(obj,A,1);
+      hprecon_fact(obj,A);
     end
     
     
     % apply preconditioner
-    function x = apply(obj, r)
+    function x = solve(obj, r)
       x = r;
-      x = apply_hprecon(obj, x);
+      x = hprecon_solve(obj, x);
     end
     
     % spits out all DOFs that were eliminated

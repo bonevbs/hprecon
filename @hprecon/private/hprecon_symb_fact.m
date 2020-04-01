@@ -1,11 +1,18 @@
-function [P, i] = symbolic_factorization_rec(P, i)
+function [P] = hprecon_symb_fact(P)
+  [P, i] = hprecon_symb_fact_rec(P, 0);
+  assert(i == P.desc + 1);
+  % fix finter and fbound for the top node
+  P.finter = 1:length(P.bound);
+end
+
+function [P, i] = hprecon_symb_fact_rec(P, i)
   if (isempty(P.Son1) && isempty(P.Son2))
     % nada
   elseif (~isempty(P.Son1) && ~isempty(P.Son2))
-    [P.Son1, i] = symbolic_factorization_rec(P.Son1, i);
-    [P.Son2, i] = symbolic_factorization_rec(P.Son2, i);
+    [P.Son1, i] = hprecon_symb_fact_rec(P.Son1, i);
+    [P.Son2, i] = hprecon_symb_fact_rec(P.Son2, i);
     %fprintf('factoring node %d\n', i)
-    P = symbolic_factor_branchnode(P);
+    P = symbfact(P);
   else
     error('Elimination tree is not balanced. This is not supported.')
   end
@@ -13,7 +20,7 @@ function [P, i] = symbolic_factorization_rec(P, i)
 end
 
 % assemble factorization from children
-function P = symbolic_factor_branchnode(P)
+function P = symbfact(P)
   % re-organize indices
   inter1 = setdiff(P.Son1.bound, P.bound, 'stable');
   inter2 = setdiff(P.Son2.bound, P.bound, 'stable');
@@ -29,7 +36,7 @@ function P = symbolic_factor_branchnode(P)
   
   % checks that everything flagged for elimination really does get eliminated
   % deactivate for performance
-  if preconoption('checks')
+  if hpreconoption('checks')
     assert(isempty(union(setdiff([bound1, bound2], P.bound), setdiff(P.bound, [bound1, bound2])) ), 'Some elements in the boundary got left out');
     assert(isempty(setdiff(inter1, P.inter)), 'Found elements in inter1 that were not originally designated for elimination');
     assert(isempty(setdiff(inter2, P.inter)), 'Found elements in inter2 that were not originally designated for elimination');
@@ -47,8 +54,8 @@ function P = symbolic_factor_branchnode(P)
   
   % in order for the children to compute the Schur complements in the
   % correct order, we store the local enumeration in the children
-  P.Son1.finter = inter1_loc;
-  P.Son1.fbound = bound1_loc;
-  P.Son2.finter = inter2_loc;
-  P.Son2.fbound = bound2_loc;
+  P.Son1.finter = inter1_loc';
+  P.Son1.fbound = bound1_loc';
+  P.Son2.finter = inter2_loc';
+  P.Son2.fbound = bound2_loc';
 end

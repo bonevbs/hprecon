@@ -1,3 +1,6 @@
+% this is the brute force version of the factorization, utilizing full
+% matrices to assemble the entire thing
+
 function P = hprecon_fact(P, A)
   P = hprecon_symb_fact(P);
   [P, i] = hprecon_fact_rec(P, A, 0);
@@ -27,93 +30,99 @@ function P = fact_branch(P, A)
 
   % recover global indices in order to figure out the right entries for
   % off-diagonal blocks
-  inter1 = P.Son1.bound(P.Son1.finter);
+  inter1 = P.Son1.bound(P.Son1.finter); 
   inter2 = P.Son2.bound(P.Son2.finter);
   bound1 = P.Son1.bound(P.Son1.fbound);
   bound2 = P.Son2.bound(P.Son2.fbound);
   idx1 = [inter1, bound1];
   idx2 = [inter2, bound2];
+  
+  Aii = [get(P.Son1.S, P.Son1.finter, P.Son1.finter), A(inter1,inter2); A(inter2,inter1), get(P.Son2.S, P.Son2.finter, P.Son2.finter)];
+  Aib = [get(P.Son1.S, P.Son1.finter, P.Son1.fbound), A(inter1,bound2); A(inter2,bound1), get(P.Son2.S, P.Son2.finter, P.Son2.fbound)];
+  Abi = [get(P.Son1.S, P.Son1.fbound, P.Son1.finter), A(bound1,inter2); A(bound2,inter1), get(P.Son2.S, P.Son2.fbound, P.Son2.finter)];
+  Abb = [get(P.Son1.S, P.Son1.fbound, P.Son1.fbound), A(bound1,bound2); A(bound2,bound1), get(P.Son2.S, P.Son2.fbound, P.Son2.fbound)];
+  
+%   Aii = [P.Son1.S(P.Son1.finter, P.Son1.finter), A(inter1,inter2); A(inter2,inter1), P.Son2.S(P.Son2.finter, P.Son2.finter)];
+%   Aib = [P.Son1.S(P.Son1.finter, P.Son1.fbound), A(inter1,bound2); A(inter2,bound1), P.Son2.S(P.Son2.finter, P.Son2.fbound)];
+%   Abi = [P.Son1.S(P.Son1.fbound, P.Son1.finter), A(bound1,inter2); A(bound2,inter1), P.Son2.S(P.Son2.fbound, P.Son2.finter)];
+%   Abb = [P.Son1.S(P.Son1.fbound, P.Son1.fbound), A(bound1,bound2); A(bound2,bound1), P.Son2.S(P.Son2.fbound, P.Son2.fbound)];
 
-  % first step - assemble & compress the combined Schur complement
-  ni1 = length(P.Son1.finter);
-  ni2 = ni1 + length(P.Son2.finter);
-  nb1 = ni2 + length(P.Son1.fbound);
-  nb2 = nb1 + length(P.Son2.fbound);
-  pi1 = 1:ni1; pi2 = ni1+1:ni2; pb1 = ni2+1:nb1; pb2 = nb1+1:nb2;
-  perm = [pi1, pb1, pi2, pb2]; iperm(perm) = 1:length(perm);
-  
-  % the interface is [pi1, pi2, pb1, pb2]
-  % the hidden matrix is structured perm = [pi1, pb1, pi2, pb2]
-  % x(perm) allows us to convert a vector from the interface format to the
-  % internal one.
-  Afun = @(x) blockfun_perm( ...
-    @(x) P.Son1.S*x, @(x) A(idx1, idx2)*x, ...
-    @(x) A(idx2, idx1)*x, @(x) P.Son2.S*x, ...
-    pi1, pb1, pi2, pb2, x);
-  Afunt = @(x) blockfun_perm( ...
-    @(x) (x'*P.Son1.S)', @(x) A(idx2, idx1)'*x, ...
-    @(x) A(idx1, idx2)'*x, @(x) (x'*P.Son2.S)', ...
-    pi1, pb1, pi2, pb2, x);
-  Aeval = @(i,j) blockeval( ...
-    @(k,l) get(P.Son1.S, k, l), @(k,l) full(A(idx1(k), idx2(l))), ...
-    @(k,l) full(A(idx2(k), idx1(l))), @(k,l) get(P.Son2.S, k, l), ...
-    length(idx1), length(idx1), iperm(i) ,iperm(j));
-  
-  % compute the Schur complement through recompression
-  cl = gen_cluster_rec([length(P.inter), length(P.inter) + length(P.bound)], hssoption('block-size'));
-  hA = hss('handle', Afun, Afunt, Aeval, length(perm), length(perm), 'cluster', cl);
-  
-  % this is just some code to compare how well we are compressing
-  Aref = [full(P.Son1.S), A(idx1, idx2); A(idx2, idx1), full(P.Son2.S)];
-  Aref = Aref(iperm,iperm); norm(Aref - hA, 'fro')/norm(Aref, 'fro')
+  %Aref = [Aii, Aib; Abi, Abb];
+  %cl = gen_cluster_rec([length(inter1), length(inter1) + length(inter2)], hssoption('block-size'));
+  %hAii = hodlr(Aii, 'cluster', cl);
+
   % use the direct way to compute the reference matrix
-  ii = setdiff(P.get_interior(), P.inter); bb = [idx1, idx2];
-  Aref = A(bb,bb) - A(bb,ii) * (A(ii,ii) \ A(ii,bb));
-  Aref = Aref(iperm,iperm); norm(Aref - hA, 'fro')/norm(Aref, 'fro')
+  %ii = setdiff(P.get_interior(), P.inter); bb = [inter1, inter2, bound1, bound2];
+  %Aref = A(bb,bb) - A(bb,ii) * (A(ii,ii) \ A(ii,bb));
+  %norm(Aref - hA, 'fro')/norm(Aref, 'fro')
+  
+  
   
   % only the top block and the left and right transforms need to be stored
-  P.Aii = clean_hss(hA.A11);
-  Abb = clean_hss(hA.A22);
+  %P.invAii = hodlr(inv(Aii));
+  %hodlrrank(P.invAii)
+  P.Aii = Aii;
+  P.invAii = inv(Aii);
+  %[U,S,V] = tsvd(full(Abi) / P.Aii, 1e-3);
+  [U,S,V] = svd_from_random_sampling(@(x) full(Abi/P.Aii)*x, @(x) full(Abi/P.Aii)'*x, length(P.inter), 1e-4);
+  P.LU = U*S; P.LV = V;
+  norm(full(Abi/P.Aii) - P.LU * P.LV', 'fro')/norm(full(Abi/P.Aii), 'fro');
+  %[U,S,V] = tsvd(full(P.Aii\Aib), 1e-3);
+  [U,S,V] = svd_from_random_sampling(@(x) full(P.Aii\Aib)*x, @(x) full(P.Aii\Aib)'*x, length(P.bound), 1e-4);
+  
+  P.RU = U*S; P.RV = V;
 
-  [P.RU,P.RV] = offdiag(hA, 'upper');
-  [P.LU,P.LV] = offdiag(hA, 'lower');
+%   P.Aii = Aii;
+%   P.LU = Abi / P.Aii;
+%   P.LV = speye(length(P.inter),length(P.inter));
+%   P.RV = (P.Aii \ Aib)';
+%   P.RU = speye(length(P.inter),length(P.inter));
+  
+  
+
+  %P.RU = hA.U12; P.RV = hA.V12;
+  %P.LU = hA.U21; P.LV = hA.V21;
   % compute intermediate matrix for efficient low-rank update
-  K = (P.LV' * (P.Aii \ P.RU)) * P.RV';
+  K = P.LU * (P.LV' * (P.Aii * P.RU)) * P.RV';
   
-  % compute the permutation to expose the finter block
-  % TODO : Eventually we can get rid of this permutation step and also of
-  % finter/fbound unless we develop a better way of assembling the
-  % intermediate Schur complement which involves exposing the topmost block
-  perm = []; iperm = [];
-  perm = [P.finter, P.fbound]; iperm(perm) = 1:length(perm);
   
-  % again using standard clusters, form the Schur complement in HSS form
-  Sfun = @(x) Abb*x - P.LU*(K*x);
-  Sfunt = @(x) Abb'*x - K'*(P.LU'*x);
-  Seval = @(i,j) get(Abb, i, j) + P.LU(i,:)*K(:,j);
-  P.S = hss('handle', @(x) Afun_perm(Sfun, iperm, x), ...
-    @(x) Afun_perm(Sfun, iperm, x), ...
-    @(i,j) Seval(perm(i), perm(j)), length(perm), length(perm));
+%   % again using standard clusters, form the Schur complement in HSS form
+%   Sfun = @(x) Abb*x - P.LU*(K*x);
+%   Sfunt = @(x) Abb'*x - K'*(P.LU'*x);
+%   Seval = @(i,j) get(Abb, i, j) + P.LU(i,:)*K(:,j);
+%   P.S = hss('handle', @(x) Afun_perm(Sfun, iperm, x), ...
+%     @(x) Afun_perm(Sfun, iperm, x), ...
+%     @(i,j) Seval(perm(i), perm(j)), length(perm), length(perm));
   
-  P.RU = P.Aii \ P.RU;
-  P.LV = (P.LV' / P.Aii)';
+  % the dense version
+  P.S = Abb - K;
+  P.S = hss(P.S);
+  
+  %P.RU = P.Aii \ P.RU;
+  %P.LV = (P.LV' / P.Aii)';
+  hssrank(P.S)
+  
+  % overwrite everything with the dense version to make sure everything
+  % else works correctly
+%   P.Aii = Aref([pi1,pi2], [pi1,pi2]);
+%   P.LU = A([pb1,pb2], [pi1,pi2]) / P.Aii;
+%   P.LV = speye(length(P.inter),length(P.inter));
+%   P.RV = (P.Aii \ A([pi1,pi2], [pb1,pb2]))';
+%   P.RU = speye(length(P.inter),length(P.inter));
+%   P.S = Aref([pb1, pb2], [pb1, pb2]) - Aref([pb1, pb2], [pi1, pi2]) *(Aref([pi1, pi2], [pi1, pi2]) \ Aref([pi1, pi2], [pb1, pb2]));
+%   P.S = P.S([P.finter, P.fbound], [P.finter, P.fbound]);
 end
 
 % factor leafnodes directly
 function P = fact_leaf(P, A)
+  P.invAii = inv(A(P.inter, P.inter));
   P.Aii = A(P.inter, P.inter);
   P.LU = A(P.bound, P.inter) / P.Aii;
   P.LV = speye(length(P.inter),length(P.inter));
   P.RV = (P.Aii \ A(P.inter, P.bound))';
   P.RU = speye(length(P.inter),length(P.inter));
-  S      = A(P.bound, P.bound) - A(P.bound, P.inter) * (P.Aii \ A(P.inter, P.bound));
-  cl     = gen_cluster_rec([length(P.finter), length(P.finter) + length(P.fbound)], hssoption('block-size'));
-  % nonstandard blocking doesn't seem to be supported yet
-  P.S    = hss(...
-           [S(P.finter, P.finter), S(P.finter, P.fbound); S(P.fbound, P.finter), S(P.fbound, P.fbound)],...
-           'cluster', cl);
-  % for now only standard clusters
-  %P.S    = hss([S(P.finter, P.finter), S(P.finter, P.fbound); S(P.fbound, P.finter), S(P.fbound, P.fbound)]);
+  P.S      = hss(A(P.bound, P.bound) - A(P.bound, P.inter) * (P.Aii \ A(P.inter, P.bound)));
+  %P.S      = A(P.bound, P.bound) - A(P.bound, P.inter) * (P.Aii \ A(P.inter, P.bound));
 end
 
 

@@ -8,6 +8,7 @@ hssoption('compression', 'qr')
 hssoption('block-size', 32)
 hssoption('norm', 'fro')
 hssoption('threshold', 1e-12)
+hodlroption('threshold',1e-12)
 
 % load problem
 load('test.mat')
@@ -17,10 +18,10 @@ p = hprecon(elim_tree);
 p.factor(A);
 
 %X = p.apply(eye(size(A)));
-% X = p.solve(A);
-% X(abs(X) < 1e-3) = 0;
-% perm = [p.get_interior(), p.get_boundary()];
-% spy(X(perm,perm))
+%X = p.solve(A);
+%X(abs(X) < 1e-3) = 0;
+%perm = [p.get_interior(), p.get_boundary()];
+%spy(X(perm,perm))
 
 % set GMRES parameters
 restart = 10;

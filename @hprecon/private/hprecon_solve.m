@@ -25,7 +25,8 @@ function r = Dsolve_rec(P, r)
     r = Dsolve_rec(P.Son1, r);
     r = Dsolve_rec(P.Son2, r);
   end
-  r(P.inter,:) = P.Aii \ r(P.inter,:);
+  %r(P.inter,:) = P.Aii \ r(P.inter,:);
+  r(P.inter,:) = P.invAii * r(P.inter,:);
 end
 
 function r = Rsolve_rec(P, r)

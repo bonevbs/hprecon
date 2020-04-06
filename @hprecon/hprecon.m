@@ -12,6 +12,7 @@ classdef hprecon < handle
     finter
     fbound
     % interior block and Schur complement in HSS format
+    invAii
     Aii
     S
     % factor for the left Gauss inverse

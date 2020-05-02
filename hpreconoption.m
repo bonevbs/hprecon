@@ -10,9 +10,10 @@ global precon_compression
 global precon_ctol
 global precon_stol
 global precon_checks
+global precon_levels
 
 if isempty(precon_compression)
-	precon_compression = 'none';
+	precon_compression = 'both';
 end
 
 if isempty(precon_ctol)
@@ -25,6 +26,10 @@ end
 
 if isempty(precon_checks)
   precon_checks = false;
+end
+
+if isempty(precon_levels)
+  precon_levels = -1;
 end
 
 if ~exist('key', 'var')
@@ -41,6 +46,8 @@ if ~exist('value', 'var')
 			opt = precon_compression;
     case 'checks'
 			opt = precon_checks;
+    case 'levels'
+      opt = precon_levels;
     otherwise
       error('Unsupported option specified');
 	end
@@ -59,7 +66,7 @@ else
         precon_itol = value;
       end
 		case 'compression'
-			if ~strcmp(value, 'none') && ~strcmp(value, 'hodlr') && ~strcmp(value, 'hss')
+			if ~strcmp(value, 'none') && ~strcmp(value, 'hss') && ~strcmp(value, 'low-rank') && ~strcmp(value, 'both')
 				error('Invalid value for compression');
 			else
 				precon_compression = value;
@@ -69,6 +76,12 @@ else
 				error('Logical value required for checks');
 			else
 				precon_checks = value;
+      end
+    case 'levels'
+      if (floor(value) ~= ceil(value)) || value == 0
+        error('Non-zero integer value required for number of levels');
+      else
+        precon_levels = value;
       end
     otherwise
       error('Unsupported option specified');

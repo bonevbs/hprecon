@@ -12,15 +12,15 @@ if nargout == 2
   return;
 end
 
-if size(obj.A11,1) ~= size(obj.A12,1) || ...
-    size(obj.A11,2) ~= size(obj.A21,2) || ...
-    size(obj.A22,1) ~= size(obj.A21,1) || ...
-    size(obj.A22,2) ~= size(obj.A12,2)
+if size(A.A11,1) ~= size(A.A12,1) || ...
+    size(A.A11,2) ~= size(A.A21,2) || ...
+    size(A.A22,1) ~= size(A.A21,1) || ...
+    size(A.A22,2) ~= size(A.A12,2)
   error('Dimension mismatch. Something went wrong');
 end
 
 m = size(A.A11,1) + size(A.A21,1);
-n = size(A.A11,2) + size(A.A11,2);
+n = size(A.A11,2) + size(A.A12,2);
 
 if exist('idx', 'var')
   switch idx

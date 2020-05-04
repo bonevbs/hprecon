@@ -42,7 +42,6 @@ function P = fact_branch(P, A)
   Aii = [full(P.Aii.A11), full(P.Aii.A12); full(P.Aii.A21), full(P.Aii.A22)];
   Abb = [full(clean_hss(P.Son1.S.A22)), full(A(bound1,bound2)); full(A(bound2,bound1)), full(clean_hss(P.Son2.S.A22))];
 
-  
   % create function handle to apply the left Gauss transform
   [U1, V1] = offdiag(P.Son1.S,'lower'); [U2, V2] = offdiag(P.Son2.S,'lower');
   L12 = A(bound1,inter2); L21 = A(bound2,inter1);

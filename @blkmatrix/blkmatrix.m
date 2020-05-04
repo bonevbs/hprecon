@@ -10,13 +10,12 @@ classdef blkmatrix
   methods
     function obj = blkmatrix(varargin)
       if nargin == 0
-        obj.A11 = [];
-        obj.A12 = [];
-        obj.A21 = [];
-        obj.A22 = [];
-        obj.S11 = [];
-        obj.S22 = [];
         return;
+      elseif nargin == 3
+        A = varargin{1};
+        mp = varargin{2};
+        np = varargin{3};
+        obj = blkmatrix(A(1:mp,1:np), A(1:mp,np+1:end), A(mp+1:end,1:np), A(mp+1:end,np+1:end));
       elseif nargin == 4
         obj.A11 = varargin{1};
         obj.A12 = varargin{2};

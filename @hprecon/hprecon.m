@@ -16,11 +16,9 @@ classdef hprecon < handle
     Aii
     S
     % factor for the left Gauss inverse
-    LU
-    LV
+    L
     % factors for the right Gauss inverse
-    RU
-    RV
+    R
   end
   
   methods

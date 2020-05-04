@@ -19,7 +19,7 @@ function r = Lsolve_rec(P, r, l, lmax)
   else
     inter = P.get_interior();
   end
-  r(P.bound,:) = r(P.bound,:) - P.LU*(P.LV'*r(inter,:));
+  r(P.bound,:) = r(P.bound,:) - P.L*r(inter,:);
 end
 
 function r = Dsolve_rec(P, r, l, lmax)
@@ -50,7 +50,7 @@ function r = Rsolve_rec(P, r, l, lmax)
     inter = P.get_interior();
   end
   % process top nodes first
-  r(inter,:) = r(inter,:) - P.RU*(P.RV'*r(P.bound,:));
+  r(inter,:) = r(inter,:) - P.R*r(P.bound,:);
   if (l < lmax || lmax == -1) && (~isempty(P.Son1) && ~isempty(P.Son2))
     r = Rsolve_rec(P.Son2, r, l+1, lmax);
     r = Rsolve_rec(P.Son1, r, l+1, lmax);

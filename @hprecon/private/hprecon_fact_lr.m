@@ -44,48 +44,44 @@ function P = fact_branch(P, A)
   Abb = [full(clean_hss(P.Son1.S.A22)), full(A(bound1,bound2)); full(A(bound2,bound1)), full(clean_hss(P.Son2.S.A22))];
 
   % create function handle to apply the left Gauss transform
-  [U1, V1] = offdiag(P.Son1.S,'lower'); [U2, V2] = offdiag(P.Son2.S,'lower');
-  L12 = A(bound1,inter2); L21 = A(bound2,inter1);
+  Abi11 = lrmatrix(); [Abi11.U, Abi11.V] = offdiag(P.Son1.S,'lower');
+  Abi12 = A(bound1,inter2);
+  Abi21 = A(bound2,inter1);
+  Abi22 = lrmatrix(); [Abi22.U, Abi22.V] = offdiag(P.Son2.S,'lower');
   function x = Lfun(x)
     [x1, x2] = blksolve_right(P.Aii, x(1:ni1,:), x(ni1+1:ni1+ni2,:));
-    x = [U1*(V1'*x1) + L12*x2; L21*x1 + U2*(V2'*x2)];
+    x = [Abi11*x1 + Abi12*x2; Abi21*x1 + Abi22*x2];
   end
   function x = Lfunt(x)
     x = x';
-    x1 = (x(:,1:nb1)*U1)*V1' + x(:,nb1+1:nb1+nb2)*L21;
-    x2 = x(:,1:nb1)*L12 + (x(:,nb1+1:nb1+nb2)*U2)*V2';
+    x1 = x(:,1:nb1)*Abi11 + x(:,nb1+1:nb1+nb2)*Abi21;
+    x2 = x(:,1:nb1)*Abi12 + x(:,nb1+1:nb1+nb2)*Abi22;
     [x1, x2] = blksolve_left(P.Aii, x1, x2);
     x = [x1, x2]; x = x';
   end
   [U,S,V] = svd_from_random_sampling(@(x) Lfun(x), @(x) Lfunt(x), ni1+ni2, 1e-9);
-  P.LU = U*S; P.LV = V;
-  
-  % apply the inverse to Abi to form left Gauss transform
-%   [U, V] = offdiag(P.Son1.S,'lower'); L11 = U*V'; L12 = A(bound1,inter2);
-%   [U, V] = offdiag(P.Son2.S,'lower'); L22 = U*V'; L21 = A(bound2,inter1);
-%   [L11, L12] = blksolve_left(P.Aii, L11, L12);
-%   [L21, L22] = blksolve_left(P.Aii, L21, L22);
-%   P.LU = [L11,L12;L21,L22];
-%   P.LV = speye(length(P.inter),length(P.inter));
+  P.L = lrmatrix(U*S, V);
   
   % apply the inverse to Aib to form the right Gauss transform
-  [U1, V1] = offdiag(P.Son1.S,'upper'); [U2, V2] = offdiag(P.Son2.S,'upper');
-  R12 = A(inter1,bound2); R21 = A(inter2,bound1);
+  Aib11 = lrmatrix(); [Aib11.U, Aib11.V] = offdiag(P.Son1.S,'upper');
+  Aib12 = A(inter1,bound2);
+  Aib21 = A(inter2,bound1);
+  Aib22 = lrmatrix(); [Aib22.U, Aib22.V] = offdiag(P.Son2.S,'upper');
   function x = Rfun(x)
-    x1 = U1*(V1'*x(1:nb1,:)) + R12*x(nb1+1:end,:);
-    x2 = R21*x(1:nb1,:) + U2*(V2'*x(nb1+1:end,:));
+    x1 = Aib11*x(1:nb1,:) + Aib12*x(nb1+1:end,:);
+    x2 = Aib21*x(1:nb1,:) + Aib22*x(nb1+1:end,:);
     [x1, x2] = blksolve_right(P.Aii, x1, x2);
     x = [x1; x2];
   end
   function x = Rfunt(x)
     x1 = x(1:ni1,:)'; x2 = x(ni1+1:end,:)';
     [x1, x2] = blksolve_left(P.Aii, x1, x2);
-    x = [(x1*U1)*V1' + x2*R21, x1*R12 + (x2*U2)*V2']';
+    x = [x1*Aib11 + x2*Aib21, x1*Aib12 + x2*Aib22]';
   end
   [U,S,V] = svd_from_random_sampling(@(x) Rfun(x), @(x) Rfunt(x), nb1+nb2, 1e-9);
-  P.RU = U*S; P.RV = V;
+  P.R = lrmatrix(U*S, V);
   
-  K = P.LU * (P.LV' * (Aii * P.RU)) * P.RV';
+  K = P.L * Aii * P.R;
 
   % the dense version
   S = Abb - K;
@@ -104,11 +100,9 @@ function P = fact_leaf(P, A)
   inter = P.get_interior();
   bound = P.bound;
   P.Aii = A(inter, inter);
-  P.LU = A(bound, inter) / P.Aii;
-  P.LV = speye(length(inter),length(inter));
-  P.RV = (P.Aii \ A(inter, bound))';
-  P.RU = speye(length(inter),length(inter));
-  S  = A(bound, bound) - A(bound, inter) * (P.Aii \ A(inter, bound));
+  P.L = A(bound, inter) / P.Aii;
+  P.R = P.Aii \ A(inter, bound);
+  S = A(bound, bound) - A(bound, inter) * (P.Aii \ A(inter, bound));
   S = S([P.finter,P.fbound],[P.finter,P.fbound]);
   %P.S = hss(S);
   P.S = hss(S,'cluster', gen_cluster_rec([length(P.finter),length(P.finter)+length(P.fbound)],hssoption('block-size')));

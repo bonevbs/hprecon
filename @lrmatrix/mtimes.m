@@ -10,6 +10,8 @@ elseif isa(A, 'lrmatrix')
   C = lrmatrix(A.U, (A.V'*B)');
 elseif isa(B, 'lrmatrix')
   C = lrmatrix(A*B.U, B.V);
+else
+  error('Something went wrong.')
 end
 
 end

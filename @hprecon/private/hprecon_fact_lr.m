@@ -33,6 +33,7 @@ function P = fact_branch(P, A)
   nb1 = length(bound1); nb2 = length(bound2);
   
   % datastructure to form the blockinverse
+  %P.Aii = blkmatrix(clean_hss(P.Son1.S.A11), A(inter1,inter2), A(inter2,inter1), clean_hss(P.Son2.S.A11));
   P.Aii = struct;
   P.Aii.A11 = clean_hss(P.Son1.S.A11);
   P.Aii.A12 = A(inter1,inter2);
@@ -68,12 +69,21 @@ function P = fact_branch(P, A)
 %   P.LV = speye(length(P.inter),length(P.inter));
   
   % apply the inverse to Aib to form the right Gauss transform
-  [U, V] = offdiag(P.Son1.S,'upper'); R11 = U*V'; R21 = A(inter2,bound1);
-  [U, V] = offdiag(P.Son2.S,'upper'); R22 = U*V'; R12 = A(inter1,bound2);
-  [R11, R21] = blksolve_right(P.Aii, R11, R21);
-  [R12, R22] = blksolve_right(P.Aii, R12, R22);
-  P.RV = [R11,R12;R21,R22]';
-  P.RU = speye(length(P.inter),length(P.inter));
+  [U1, V1] = offdiag(P.Son1.S,'upper'); [U2, V2] = offdiag(P.Son2.S,'upper');
+  R12 = A(inter1,bound2); R21 = A(inter2,bound1);
+  function x = Rfun(x)
+    x1 = U1*(V1'*x(1:nb1,:)) + R12*x(nb1+1:end,:);
+    x2 = R21*x(1:nb1,:) + U2*(V2'*x(nb1+1:end,:));
+    [x1, x2] = blksolve_right(P.Aii, x1, x2);
+    x = [x1; x2];
+  end
+  function x = Rfunt(x)
+    x1 = x(1:ni1,:)'; x2 = x(ni1+1:end,:)';
+    [x1, x2] = blksolve_left(P.Aii, x1, x2);
+    x = [(x1*U1)*V1' + x2*R21, x1*R12 + (x2*U2)*V2']';
+  end
+  [U,S,V] = svd_from_random_sampling(@(x) Rfun(x), @(x) Rfunt(x), nb1+nb2, 1e-9);
+  P.RU = U*S; P.RV = V;
   
   K = P.LU * (P.LV' * (Aii * P.RU)) * P.RV';
 

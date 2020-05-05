@@ -4,6 +4,7 @@ classdef lrmatrix
     V
   end
   methods
+    
     function obj = lrmatrix(varargin)
       if nargin == 0
         obj.U = [];
@@ -19,12 +20,23 @@ classdef lrmatrix
         assert(size(obj.U,2) == size(obj.V,2), 'Dimension mismatch.');
       end
     end
+    
+    function ind = end(obj,k,n)
+      if n == 1
+        ind = prod(size(obj));
+      else
+        ind = size(obj,k);
+      end
+    end
+    
     function rk = rank(obj)
       rk = size(obj.U,2);
     end
+    
     function obj = ctranspose(A)
       obj = lrmatrix(A.V, A.U);
     end
+    
     function A = full(obj)
       A = obj.U*obj.V';
     end

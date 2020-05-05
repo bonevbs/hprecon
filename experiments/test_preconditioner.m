@@ -11,6 +11,7 @@ hpreconoption('levels', 8)
 hssoption('compression', 'svd')
 hssoption('block-size', 30)
 hssoption('norm', 2)
+% see whether 1e-3 with high inversion accuracy works
 hssoption('threshold', 1e-6)
 
 

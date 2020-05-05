@@ -13,8 +13,11 @@ if isa(B,'blkmatrix')
       [C.A11, C.A21] = blkmatrix_solve(A, B.A11, B.A21);
       [C.A12, C.A22] = blkmatrix_solve(A, B.A12, B.A22);
     else
+      warning("Blocking does not align. Using full matrix - this might be inefficient.")
       C = A\full(B);
     end
+  else
+    C = A\full(B);
   end
 else
   if size(A.A11,1) ~= size(A.A11,2)

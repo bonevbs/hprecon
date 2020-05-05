@@ -9,6 +9,7 @@ if isa(A, 'blkmatrix') && isa(B, 'blkmatrix')
     C = blkmatrix(A.A11*B.A11 + A.A12*B.A21, A.A11*B.A12 + A.A12*B.A22, ...
       A.A21*B.A11 + A.A22*B.A21, A.A21*B.A12 + A.A22*B.A22);
   else
+    warning("Matrix blocking doesn't align. This may be inefficient")
     C = A * full(B);
   end
 elseif isa(A, 'blkmatrix')

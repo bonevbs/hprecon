@@ -1,4 +1,4 @@
-function hprecon_fact_lr(P, A)
+function P = hprecon_fact_lr(P, A)
   P = hprecon_symb_fact(P);
   [P, i] = hprecon_fact_rec(P, A, 1, 1, hpreconoption('levels'));
   %assert(i == P.desc + 1);
@@ -36,17 +36,12 @@ function P = fact_branch(P, A)
   P.Aii = blkmatrix(clean_hss(P.Son1.S.A11), A(inter1,inter2), A(inter2,inter1), clean_hss(P.Son2.S.A11));
   Abb = blkmatrix(clean_hss(P.Son1.S.A22), A(bound1,bound2), A(bound2,bound1), clean_hss(P.Son2.S.A22));
   
-  %Aii = [full(P.Aii.A11), full(P.Aii.A12); full(P.Aii.A21), full(P.Aii.A22)];
-  %Abb = [full(clean_hss(P.Son1.S.A22)), full(A(bound1,bound2)); full(A(bound2,bound1)), full(clean_hss(P.Son2.S.A22))];
-
   % create function handle to apply the left Gauss transform
   Abi11 = lrmatrix(); [Abi11.U, Abi11.V] = offdiag(P.Son1.S,'lower');
   Abi12 = A(bound1,inter2);
   Abi21 = A(bound2,inter1);
   Abi22 = lrmatrix(); [Abi22.U, Abi22.V] = offdiag(P.Son2.S,'lower');
   Abi = blkmatrix(Abi11, Abi12, Abi21, Abi22);
-  [U,S,V] = svd_from_random_sampling(@(x) Abi*(P.Aii\x), @(x) ((x'*Abi)/P.Aii)', ni1+ni2, 1e-9);
-  P.L = lrmatrix(U*S, V);
   
   % apply the inverse to Aib to form the right Gauss transform
   Aib11 = lrmatrix(); [Aib11.U, Aib11.V] = offdiag(P.Son1.S,'upper');
@@ -54,18 +49,50 @@ function P = fact_branch(P, A)
   Aib21 = A(inter2,bound1);
   Aib22 = lrmatrix(); [Aib22.U, Aib22.V] = offdiag(P.Son2.S,'upper');
   Aib = blkmatrix(Aib11, Aib12, Aib21, Aib22);
-  [U,S,V] = svd_from_random_sampling(@(x) P.Aii\(Aib*x), @(x) ((x'/P.Aii)*Aib)', nb1+nb2, 1e-9);
-  P.R = lrmatrix(U*S, V);
+  
+  % form and left Gauss transforms
+  if hpreconoption('lrcompression') == 1
+    P.L = lrmatrix(@(x) Abi*(P.Aii\x), @(x) ((x'*Abi)/P.Aii)', [nb1+nb2, ni1+ni2]);
+    P.R = lrmatrix(@(x) P.Aii\(Aib*x), @(x) ((x'/P.Aii)*Aib)', [ni1+ni2, nb1+nb2]);
+  else
+    P.L = Abi*(P.Aii\x);
+    P.R = P.Aii\(Aib*x);
+  end
   
   K = Abi * P.R;
+  perm = [P.finter,P.fbound];
+  iperm(perm) = 1:length(perm);
+  
+  % these functions are necessary for 
+  function x = Sfun(x)
+    x(iperm,:) = Abb * x(iperm,:) - K * x(iperm,:);
+  end
+  function x = Sfunt(x)
+    x(iperm,:) = (x(iperm,:)' * Abb - x(iperm,:)' * K)';
+  end
+  function x = Seval(i,j)
+    x = Abb(perm(i),perm(j)) - K(perm(i),perm(j));
+  end
+  
+  if strcmp(hpreconoption('merging-algorithm'), 'martinsson')
+    %P.S = hss('handle', @Sfun, @Sfunt, @Seval, size(Abb,1), size(Abb,2),...
+    %  'cluster', gen_cluster_rec([length(P.finter),length(P.finter)+length(P.fbound)],hssoption('block-size')));
+    S(iperm,iperm) = full(Abb) - full(K);
+    P.S = hss('handle', @(x) S*x, @(x) S'*x, @(i,j) S(i,j), size(Abb,1), size(Abb,2),...
+      'cluster', gen_cluster_rec([length(P.finter),length(P.finter)+length(P.fbound)],hssoption('block-size')));
+  elseif strcmp(hpreconoption('merging-algorithm'), 'low-rank')
+    %B = lrmatrix([sparse(nb1,nb1), A(bound1,bound2), A(bound2,bound1), sparse(nb2,nb2)]) + K;
+    %B = hss('low-rank', B.U, B.V);
+    error('Unsupported as of now')
+  elseif strcmp(hpreconoption('merging-algorithm'), 'direct')
+    S(iperm,iperm) = full(Abb) - full(K);
+    P.S = hss(S,'cluster', gen_cluster_rec([length(P.finter),length(P.finter)+length(P.fbound)],hssoption('block-size')));
+  else
+    error('Unknown merging algorithm.')
+  end
 
-  % the dense version
-  S = full(Abb) - K;
-  S = S([P.finter,P.fbound],[P.finter,P.fbound]);
-  %P.S = hss(P.S);
+  %S = S([P.finter,P.fbound],[P.finter,P.fbound]);
   %P.S = hss('handle', @(x) P.S*x, @(x) P.S'*x, @(i,j) P.S(i,j), size(P.S,1), size(P.S,2));
-  %P.S = hss(S);
-  P.S = hss(S,'cluster', gen_cluster_rec([length(P.finter),length(P.finter)+length(P.fbound)],hssoption('block-size')));
 
   %fprintf("HPRECON_FACT_HSS: hss rank of the Schur complement: %d\n", hssrank(P.S));
 end
@@ -79,6 +106,5 @@ function P = fact_leaf(P, A)
   P.R = P.Aii \ A(inter, bound);
   S = A(bound, bound) - A(bound, inter) * (P.Aii \ A(inter, bound));
   S = S([P.finter,P.fbound],[P.finter,P.fbound]);
-  %P.S = hss(S);
   P.S = hss(S,'cluster', gen_cluster_rec([length(P.finter),length(P.finter)+length(P.fbound)],hssoption('block-size')));
 end

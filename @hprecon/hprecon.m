@@ -41,13 +41,7 @@ classdef hprecon < handle
     
     % compute factorization
     function factor(obj, A)
-      if strcmp(hpreconoption('compression'),'both')
-        hprecon_fact_lr(obj,A);
-      elseif strcmp(hpreconoption('compression'),'hss')
-        hprecon_fact_full(obj,A);
-      else
-        error('Currently unsupported!\n');
-      end
+      hprecon_fact_lr(obj,A);
     end
     
     

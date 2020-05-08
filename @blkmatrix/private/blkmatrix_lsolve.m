@@ -1,4 +1,4 @@
-function [x1, x2] = blkmatrix_solve(A, b1, b2)
+function [x1, x2] = blkmatrix_lsolve(A, b1, b2)
   x1 = A.A11\b1;
   x2 = b2 - A.A21*x1;
   if isempty(A.S22)

@@ -1,28 +1,28 @@
 function opt = hpreconoption(key, value)
-%HODLROPTION Set or get an option for nylea preconditioner.
+%HPRECONOPTION: Determine the 
 %
 % Valid options are:
 %   'compression':           Possible values are none, hodlr, hss
 %   'compression-tolerance': Value used for off-diagonal truncation.
 %   'inversion-tolerance':   Value used for inversion of hierarchical matrices.
 
-global precon_compression
-global precon_ctol
-global precon_stol
+global precon_lrcompression
+global precon_mergemode
+%global precon_stol
 global precon_checks
 global precon_levels
 
-if isempty(precon_compression)
-	precon_compression = 'both';
+if isempty(precon_mergemode)
+	precon_mergemode = 'direct';
 end
 
-if isempty(precon_ctol)
-  precon_ctol = 1e-3;
+if isempty(precon_lrcompression)
+	precon_lrcompression = 1;
 end
 
-if isempty(precon_stol)
-  precon_stol = 1e-12;
-end
+% if isempty(precon_stol)
+%   precon_stol = 1e-12;
+% end
 
 if isempty(precon_checks)
   precon_checks = false;
@@ -38,12 +38,12 @@ end
 
 if ~exist('value', 'var')
   switch key
-    case 'compression-tolerance'
-      opt = precon_ctol;
-    case 'solve-tolerance'
-      opt = precon_stol;
-		case 'compression'
-			opt = precon_compression;
+%     case 'solve-tolerance'
+%       opt = precon_stol;
+    case 'merging-algorithm'
+      opt = precon_mergemode;
+		case 'lrcompression'
+			opt = precon_lrcompression;
     case 'checks'
 			opt = precon_checks;
     case 'levels'
@@ -53,23 +53,32 @@ if ~exist('value', 'var')
 	end
 else
 	switch key
-    case 'compression-tolerance'
-      if value < 0
-        error('compression-tolerance has to be positive');
-      else
-        precon_ctol = value;
-      end
-    case 'solve-tolerance'
-      if value < 0
-        error('solve-tolerance has to be positive');
-      else
-        precon_itol = value;
-      end
-		case 'compression'
-			if ~strcmp(value, 'none') && ~strcmp(value, 'hss') && ~strcmp(value, 'low-rank') && ~strcmp(value, 'both')
-				error('Invalid value for compression');
+%     case 'solve-tolerance'
+%       if value < 0
+%         error('solve-tolerance has to be positive');
+%       else
+%         precon_itol = value;
+%       end
+    case 'merging-algorithm'
+			if strcmp(value, 'direct')
+        precon_mergemode = value;
+      elseif strcmp(value, 'martinsson') || strcmp(value, 'direct')
+        precon_mergemode = value;
+        if precon_lrcompression == 0
+          precon_lrcompression = 1;
+          warning('lrcompression was set to 0. Activating low-rank compression of Gauss transforms.')
+        end
 			else
-				precon_compression = value;
+				error('Unknown merging algorithm specified.');
+      end
+		case 'lrcompression'
+			if value == 0 || value == 1
+        precon_lrcompression = value;
+        if (strcmp(value, 'martinsson') || strcmp(value, 'direct')) && ~precon_lrcompression
+          warning('Switching to direct merging of Schur complements.')
+        end
+			else
+				error('Binary value required for lrcompression');
       end
     case 'checks'
       if value ~= true && value ~= false

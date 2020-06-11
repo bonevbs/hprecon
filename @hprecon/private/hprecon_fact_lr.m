@@ -6,12 +6,12 @@ end
 
 function [P, i] = hprecon_fact_rec(P, A, i, l, lmax)
   if l == lmax || (isempty(P.Son1) && isempty(P.Son2))
-    %fprintf('HPRECON_FACT: factoring node %d\n', i)
+    fprintf('HPRECON_FACT: factoring node %d\n', i)
     P = fact_leaf(P, A);
   elseif (l < lmax || lmax == -1) && (~isempty(P.Son1) && ~isempty(P.Son2))
     [P.Son1, i] = hprecon_fact_rec(P.Son1, A, i, l+1, lmax);
     [P.Son2, i] = hprecon_fact_rec(P.Son2, A, i, l+1, lmax);
-    %fprintf('HPRECON_FACT: factoring node %d\n', i)
+    fprintf('HPRECON_FACT: factoring node %d\n', i)
     P = fact_branch(P, A);
   else
     error('HPRECON_FACT: Something went wrong. This is not supported.')
@@ -51,13 +51,8 @@ function P = fact_branch(P, A)
   Aib = blkmatrix(Aib11, Aib12, Aib21, Aib22);
   
   % form and left Gauss transforms
-  if hpreconoption('lrcompression') == 1
-    P.L = lrmatrix(@(x) Abi*(P.Aii\x), @(x) ((x'*Abi)/P.Aii)', [nb1+nb2, ni1+ni2]);
-    P.R = lrmatrix(@(x) P.Aii\(Aib*x), @(x) ((x'/P.Aii)*Aib)', [ni1+ni2, nb1+nb2]);
-  else
-    P.L = Abi*(P.Aii\x);
-    P.R = P.Aii\(Aib*x);
-  end
+  P.L = lrmatrix(@(x) Abi*(P.Aii\x), @(x) ((x'*Abi)/P.Aii)', [nb1+nb2, ni1+ni2]);
+  P.R = lrmatrix(@(x) P.Aii\(Aib*x), @(x) ((x'/P.Aii)*Aib)', [ni1+ni2, nb1+nb2]);
   
   K = Abi * P.R;
   perm = [P.finter,P.fbound];
@@ -75,11 +70,13 @@ function P = fact_branch(P, A)
   end
   
   if strcmp(hpreconoption('merging-algorithm'), 'martinsson')
+    cl = gen_cluster_rec([length(P.finter),length(P.finter)+length(P.fbound)],hssoption('block-size'));
     %P.S = hss('handle', @Sfun, @Sfunt, @Seval, size(Abb,1), size(Abb,2),...
     %  'cluster', gen_cluster_rec([length(P.finter),length(P.finter)+length(P.fbound)],hssoption('block-size')));
     S(iperm,iperm) = full(Abb) - full(K);
-    P.S = hss('handle', @(x) S*x, @(x) S'*x, @(i,j) S(i,j), size(Abb,1), size(Abb,2),...
-      'cluster', gen_cluster_rec([length(P.finter),length(P.finter)+length(P.fbound)],hssoption('block-size')));
+    %P.S = hss('handle', @(x) S*x, @(x) S'*x, @(i,j) S(i,j), size(Abb,1), size(Abb,2),'cluster', cl);
+    P.S = build_hss_tree(size(S,1), size(S,2), hssoption('block-size'), cl, cl);
+    P.S = hss_martinsson_adaptive(P.S, @Sfun, @Sfunt, @Seval, size(Abb,1), size(Abb,2), 10);
   elseif strcmp(hpreconoption('merging-algorithm'), 'low-rank')
     %B = lrmatrix([sparse(nb1,nb1), A(bound1,bound2), A(bound2,bound1), sparse(nb2,nb2)]) + K;
     %B = hss('low-rank', B.U, B.V);
@@ -87,6 +84,8 @@ function P = fact_branch(P, A)
   elseif strcmp(hpreconoption('merging-algorithm'), 'direct')
     S(iperm,iperm) = full(Abb) - full(K);
     P.S = hss(S,'cluster', gen_cluster_rec([length(P.finter),length(P.finter)+length(P.fbound)],hssoption('block-size')));
+    %P.S = proper(P.S);
+    %P.S = compress(P.S);
   else
     error('Unknown merging algorithm.')
   end
@@ -107,4 +106,5 @@ function P = fact_leaf(P, A)
   S = A(bound, bound) - A(bound, inter) * (P.Aii \ A(inter, bound));
   S = S([P.finter,P.fbound],[P.finter,P.fbound]);
   P.S = hss(S,'cluster', gen_cluster_rec([length(P.finter),length(P.finter)+length(P.fbound)],hssoption('block-size')));
+  %P.S = compress(P.S);
 end

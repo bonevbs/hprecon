@@ -1,12 +1,12 @@
 rng(0)
 
-GenMatrixHighContrast2D('test.mat', 64, 2, 25, 1, 0);
-%GenMatrixHelmholtz2D('test.mat', 64, 2, 25, 15);
+%GenMatrixHighContrast2D('test.mat', 64, 2, 25, 1, 0);
+GenMatrixHelmholtz2D('test.mat', 64, 2, 25, 15);
 
 % set up hm-toolbox and preconditoner
-hpreconoption('lrcompression', 1)
+%hpreconoption('lrcompression', 0)
 hpreconoption('merging-algorithm', 'direct')
-hpreconoption('levels', 8)
+hpreconoption('levels', 5)
 %hpreconoption('compression-tolerance', 1e-3)
 %hpreconoption('solve-tolerance', 1e-12)
 hssoption('compression', 'svd')
@@ -14,7 +14,6 @@ hssoption('block-size', 30)
 hssoption('norm', 2)
 % see whether 1e-3 with high inversion accuracy works
 hssoption('threshold', 1e-5)
-
 
 % load problem
 load('test.mat')

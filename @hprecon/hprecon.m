@@ -41,7 +41,8 @@ classdef hprecon < handle
     
     % compute factorization
     function factor(obj, A)
-      hprecon_fact_lr(obj,A);
+      %hprecon_fact_lr(obj,A);
+      hprecon_fact_hss(obj,A);
     end
     
     

@@ -1,7 +1,8 @@
 function maxk = maxrank(p, varargin)
 % MAXRANK(p): traverses the preconditioner tree structure to find the
 % maximum rank
-relrank = 0;
+relrank = false;
+verbose = false;
 mode = 'both';
 if nargin > 1
   if strcmp(varargin{1}, 'complements') || strcmp(varargin{1}, 'transforms') || strcmp(varargin{1}, 'both')
@@ -21,17 +22,17 @@ if nargin > 2
 end
 
 
-maxk =  maxrank_rec(p, 0, mode, relrank, 1);
+maxk =  maxrank_rec(p, 0, mode, relrank, verbose, 1);
 
 end
 
-function [maxk, i] = maxrank_rec(p, maxk, mode, relrank, i)
+function [maxk, i] = maxrank_rec(p, maxk, mode, relrank, verbose, i)
 
 if ~isempty(p.Son1)
-  [maxk, i] = maxrank_rec(p.Son1, maxk, mode, relrank, i);
+  [maxk, i] = maxrank_rec(p.Son1, maxk, mode, relrank, verbose, i);
 end
 if ~isempty(p.Son2)
-  [maxk, i] = maxrank_rec(p.Son2, maxk, mode, relrank, i);
+  [maxk, i] = maxrank_rec(p.Son2, maxk, mode, relrank, verbose, i);
 end
 
 if ~isempty(p.S)
@@ -44,7 +45,7 @@ if ~isempty(p.S)
         k = k/size(p.S,2);
       end
       maxk = max(k, maxk);
-      fprintf('Rank of Schur complement #%d: %d \n', i, k);
+      if verbose; fprintf('Rank of Schur complement #%d: %d \n', i, k); end
     end
   end
   if strcmp(mode, 'transforms') || strcmp(mode, 'both')
@@ -55,7 +56,7 @@ if ~isempty(p.S)
         lk = rank(p.L);
       end
       maxk = max(lk, maxk);
-      fprintf('Rank of left Gauss transform #%d: %d \n', i, lk);
+      if verbose; fprintf('Rank of left Gauss transform #%d: %d \n', i, lk); end
     end
     if isa(p.R, 'lrmatrix')
       if relrank
@@ -64,7 +65,7 @@ if ~isempty(p.S)
         rk = rank(p.R);
       end
       maxk = max(rk, maxk);
-      fprintf('Rank of right Gauss transform #%d: %d \n', i, rk);
+      if verbose; fprintf('Rank of right Gauss transform #%d: %d \n', i, rk); end
     end
   end
   i = i + 1;

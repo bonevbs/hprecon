@@ -1,4 +1,4 @@
-classdef blkmatrix
+classdef blkmatrix < handle
   properties
     A11
     A12

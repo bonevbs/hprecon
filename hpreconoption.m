@@ -54,8 +54,8 @@ else
 				precon_checks = value;
       end
     case 'levels'
-      if (floor(value) ~= ceil(value)) || value == 0
-        error('Non-zero integer value required for number of levels');
+      if (floor(value) ~= ceil(value))
+        error('Integer value required for number of levels');
       else
         precon_levels = value;
       end

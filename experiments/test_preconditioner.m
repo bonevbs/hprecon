@@ -3,11 +3,13 @@ rng(0)
 % parameters of the discretization
 pdeg = 1;
 hinv = 512;
-bsz = 10*(pdeg+1)*(pdeg+2)/2;
+bsz = 2*10*(pdeg+1)*(pdeg+2)/2;
 
-%GenMatrixPoissonSquareCG2D('test.mat', 128, 1, 25)
+%GenMatrixPoisson2D('test.mat', hinv,pdeg, 10)
+%GenMatrixPoissonCG2D('test.mat', hinv,pdeg, 25)
 %GenMatrixHighContrast2D('test.mat', 64, 2, 25, 1, 0);
-GenMatrixHelmholtz2D('test.mat', hinv, pdeg, 10, 19.5);
+%GenMatrixHelmholtz2D('test.mat', hinv, pdeg, 10, 19.5);
+GenMatrixElasticity2D('test.mat', hinv, pdeg, 'forced 2', 10);
 % load problem
 load('test.mat')
 
@@ -37,7 +39,7 @@ p.factor(A)
 %spy(X(perm,perm))
 
 % set GMRES parameters
-restart = 20;
+restart = 10;
 tol = 1e-9;
 maxit = 100 / restart;
 

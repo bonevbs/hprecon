@@ -1,8 +1,8 @@
 rng(0)
 
 % parameters of the discretization
-pdeg = 1;
-hinv = 512;
+pdeg = 3;
+hinv = 256;
 bsz = 2*10*(pdeg+1)*(pdeg+2)/2;
 
 %GenMatrixPoisson2D('test.mat', hinv,pdeg, 10)

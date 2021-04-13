@@ -43,8 +43,28 @@ function P = fact_branch(P, A)
   P.Aii.A22 = clean_hss(P.Son2.S.A11);
   [r1, c1] = cluster(P.Aii.A11);
   [r2, c2] = cluster(P.Aii.A22);
-  P.Aii.A12 = hss(A(inter1,inter2), 'cluster', r1, c2);
-  P.Aii.A21 = hss(A(inter2,inter1), 'cluster', r2, c1);
+  % equilibrate
+  % this is extremely hacky and does not account for unbalanced trees yet!
+  while length(r1) ~= length(r2)
+    warning('Warning! Cluster trees have to be equilibrated')
+    if length(r1) > length(r2)
+      P.Aii.A11 = remove_leaves(P.Aii.A11);
+      [r1, c1] = cluster(P.Aii.A11);
+    elseif length(r2) > length(r1)
+      P.Aii.A22 = remove_leaves(P.Aii.A22);
+      [r2, c2] = cluster(P.Aii.A22);
+    else
+      error('Something went wrong.')
+    end
+  end
+  P.Aii.A12 = hss(full(A(inter1,inter2)), 'cluster', r1, c2);
+  P.Aii.A21 = hss(full(A(inter2,inter1)), 'cluster', r2, c1);
+  %A12 = A(inter1,inter2);
+  %P.Aii.A12 = build_hss_tree(length(inter1), length(inter2), hssoption('block-size'), r1, c2);
+  %P.Aii.A12 = hss_martinsson_adaptive(P.Aii.A12, @(x) A12*x, @(x) A12'*x, @(i,j) A12(i,j), length(inter1), length(inter2), 0);
+  %A21 = A(inter2,inter1);
+  %P.Aii.A21 = build_hss_tree(length(inter2), length(inter1), hssoption('block-size'), r2, c1);
+  %P.Aii.A21 = hss_martinsson_adaptive(P.Aii.A21, @(x) A21*x, @(x) A21'*x, @(i,j) A21(i,j), length(inter2), length(inter1), 0);
   %max(hssrank(P.Aii.A12), hssrank(P.Aii.A21))
   %norm(P.Aii.A12 - A(inter1,inter2), 'fro')/norm(A(inter1,inter2), 'fro')
   %norm(P.Aii.A21 - A(inter2,inter1), 'fro')/norm(A(inter2,inter1), 'fro')

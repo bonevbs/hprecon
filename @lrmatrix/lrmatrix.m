@@ -23,14 +23,14 @@ classdef lrmatrix
         return;
       elseif nargin == 1 && isa(varargin{1}, 'double')
         A = varargin{1};
-        [U,S,V] = svd_from_random_sampling(@(x) A*x, @(x) A'*x, size(A), 1e-6, 0);
+        [U,S,V] = svd_from_random_sampling(@(x) A*x, @(x) A'*x, size(A), 0.5*hssoption('threshold'), 1);
         obj = lrmatrix(U*S, V);
       elseif nargin == 2 && isa(varargin{1}, 'double') && isa(varargin{2}, 'double')
         obj.U = varargin{1};
         obj.V = varargin{2};
         assert(size(obj.U,2) == size(obj.V,2), 'Dimension mismatch.');
       elseif nargin == 3 && isa(varargin{1}, 'function_handle') && isa(varargin{2}, 'function_handle')
-        [U,S,V] = svd_from_random_sampling(varargin{1}, varargin{2}, varargin{3}, 1e-6, 0);
+        [U,S,V] = svd_from_random_sampling(varargin{1}, varargin{2}, varargin{3}, 0.5*hssoption('threshold'), 1);
         obj = lrmatrix(U*S, V);
       else
         error('Unsupported input.')

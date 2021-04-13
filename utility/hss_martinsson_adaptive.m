@@ -7,7 +7,7 @@ function B = hss_martinsson_adaptive(obj, Afun, Afunt, Aeval, m, n, kest)
 %     hierarchically semiseparable representation of a matrix." SIAM
 %     Journal on Matrix Analysis and Applications 32.4 (2011): 1251-1274
 
-reltol = true;
+reltol = 1;
 
 tol = hssoption('threshold');
 nrm_type = hssoption('norm');
@@ -60,7 +60,7 @@ while failed && k < n
   failed = (nrm_est > tol);
   
   if failed
-    %fprintf('HSS_MARTINSSON_ADAPTIVE :: Enlarging sampling space to %d\n', k+bs);
+    fprintf('HSS_MARTINSSON_ADAPTIVE :: Enlarging sampling space to %d\n', k+bs);
     Ocol = [ Ocol, Ocol_test ];
     Scol = [ Scol, Scol_test ];
     Orow = [ Orow, Orow_test ];

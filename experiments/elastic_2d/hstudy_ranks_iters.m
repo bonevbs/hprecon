@@ -4,9 +4,9 @@ rng(0)
 % set GMRES parameters
 restart = 10;
 tol = 1e-9;
-maxit = 100 / restart;
+maxit = 30 / restart;
 
-hvals = [16, 32, 64, 128, 256; 16, 32, 64, 128, 256; 16, 32, 64, 128, NaN];
+hvals = [16, 32, 64, 128, 256; 16, 32, 64, 128, 256; 16, 32, 64, 128, 256];
 pvals = [1; 2; 3]*ones(1,size(hvals,2));
 iters = zeros(size(pvals));
 ranks = zeros(size(pvals));
@@ -23,7 +23,7 @@ for ih=1:size(hvals,2)
       continue
     end
     
-    GenMatrixElasticity2D('test.mat', h, p, 'forced 2', 10);
+    GenMatrixElasticity2D('test.mat', h, p, 'heterogeneous', 10);
     load('test.mat')
     
     % set compression options

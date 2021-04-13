@@ -4,11 +4,10 @@ rng(0)
 % set GMRES parameters
 restart = 10;
 tol = 1e-9;
-maxit = 100 / restart;
+maxit = 30 / restart;
 
 pvals = [3,4,5,6,7,8,9,10,11,12; 2,3,4,5,6,7,8,NaN,NaN,NaN; 1,2,3,4,5,6,NaN,NaN,NaN,NaN];
 hvals = [16; 32; 64]*ones(1,size(pvals,2));
-k = 19.5;
 iters = zeros(size(pvals));
 ranks = zeros(size(pvals));
 dofs = zeros(size(pvals));
@@ -24,7 +23,7 @@ for ih=1:size(hvals,1)
       continue
     end
     
-    GenMatrixElasticity2D('test.mat', h, p, 'forced 2', 10);
+    GenMatrixElasticity2D('test.mat', h, p, 'heterogeneous', 10);
     load('test.mat')
     
     % set compression options
@@ -45,7 +44,7 @@ for ih=1:size(hvals,1)
     % run GMRES
     [x1,fl1,rr1,it1,rv1] = gmres(A,b,restart,tol,maxit,@precon.solve);
     
-    fprintf('GMRES results with h=1/%d, p=%d and k=%4.1f\n', h, p, k)
+    fprintf('GMRES results with h=1/%d, p=%d\n', h, p)
     fprintf('Iterations with hierarchical preconditioning:    %4.0f\n', length(rv1)-1)
     
     iters(ih, ip) = length(rv1)-1;
@@ -79,3 +78,4 @@ ylabel('maximum HSS rank')
 hold off
 
 %% Output a table
+save('pstudy.mat')

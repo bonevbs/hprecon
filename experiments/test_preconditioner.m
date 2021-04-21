@@ -25,7 +25,7 @@ load('test.mat')
 % set up hm-toolbox and preconditoner
 %hpreconoption('lrcompression', 0)
 hpreconoption('merging-algorithm', 'martinsson')
-hpreconoption('levels', -2)
+hpreconoption('levels', -4)
 %hpreconoption('compression-tolerance', 1e-3)
 %hpreconoption('solve-tolerance', 1e-12)
 hssoption('compression', 'svd')
